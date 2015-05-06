@@ -1,4 +1,4 @@
-module Bootstrap.Client.Main where 
+module DeanList.Client.Main where 
 
 import Debug.Trace (trace)
 

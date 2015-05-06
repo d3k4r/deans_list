@@ -19,9 +19,9 @@ gulp.task('clean', function(cb) {
 gulp.task('client-compile', function(){
   return gulp.src([paths.client, paths.dependencies])
     .pipe(purescript.psc({
-      main: 'Bootstrap.Client.Main', 
+      main: 'DeanList.Client.Main', 
       output: 'client_nobrowserify.js', 
-      module: ['Bootstrap.Client.Main']
+      module: ['DeanList.Client.Main']
     }))
     .on('error', function(e){
       console.error('task client-compile:');
@@ -47,9 +47,9 @@ gulp.task('client-browserify', ['client-compile'], function() {
 gulp.task('server', function(){
   return gulp.src([paths.server, paths.dependencies])
     .pipe(purescript.psc({
-      main: 'Bootstrap.Server.Main', 
+      main: 'DeanList.Server.Main', 
       output: 'server.js',
-      module: ['Bootstrap.Server.Main']
+      module: ['DeanList.Server.Main']
     }))
     .on('error', function(e){
       console.error('task server:');

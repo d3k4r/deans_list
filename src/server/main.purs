@@ -1,4 +1,4 @@
-module Bootstrap.Server.Main where 
+module DeanList.Server.Main where 
 
 import Debug.Trace (trace)
 import Data.Function (Fn3(..))
