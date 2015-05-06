@@ -13,10 +13,8 @@ type UiState = { state :: AppState, virtual :: VTree, dom :: Node }
 
 initAppState :: AppState
 initAppState = { books: [
-    { path: "books/book1.epub" },
-    { path: "books/book2.epub" },
-    { path: "books/book3.epub" },
-    { path: "books/book4.epub" }
+    { path: "./books/away_from_sequential_tarpit.pdf" },
+    { path: "./books/cspbook.pdf" }
   ]}
 
 render :: AppState -> VTree
@@ -24,7 +22,7 @@ render state = vnode "div" {className: "container"} [title, bookList]
   where
     title = vnode "h1" {} [vtext "Dean's List"]
     bookList = vnode "ul" {} bookItems
-    bookItems = map (\b -> vnode "li" {} [vtext b.path]) state.books
+    bookItems = map (\b -> vnode "li" {} [vnode "a" {href: b.path} [vtext b.path]]) state.books
 
 initUiState :: AppState -> UiState
 initUiState state = { state: state, virtual: virtual, dom: dom }
