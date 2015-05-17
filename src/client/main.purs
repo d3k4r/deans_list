@@ -19,12 +19,15 @@ type Book = String
 type AppState = { books :: [Book] }
 type UiState = { state :: AppState, virtual :: VTree, dom :: Node }
 
+bookPath :: Book -> String
+bookPath b = "books/" ++ b
+
 render :: AppState -> VTree
 render state = vnode "div" {className: "container"} [title, bookList]
   where
-    title = vnode "h1" {} [vtext "Dean's List"]
-    bookList = vnode "ul" {} bookItems
-    bookItems = map (\b -> vnode "li" {} [vnode "a" {href: b} [vtext b]]) state.books
+    title = vnode "h1" {className: "title"} [vtext "Dean's List"]
+    bookList = vnode "div" {} bookItems
+    bookItems = map (\b -> vnode "div" {className: "book"} [vnode "a" {href: bookPath b} [vtext b]]) state.books
 
 initUiState :: AppState -> UiState
 initUiState state = { state: state, virtual: virtual, dom: dom }
