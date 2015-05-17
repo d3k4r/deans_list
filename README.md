@@ -1,22 +1,22 @@
-# PureScript bootstrap project
+# Dean's List
 
-This is a bootstrap project for developing web apps with PureScript. It is a simple server written in PureScript that serves a single static page running PureScript client code. Source files are rebuilt and the server is restarted when source code changes.
+Displays a list of files from a server directory. But using PureScript!
 
-Tech stack: npm + bower + gulp + browserify + express
+## Setup
 
-## Install external dependencies
+### Install external dependencies
 
 * [PureScript](http://www.purescript.org/download/)
 * [Node Package Manager](https://nodejs.org/)
 
-## Install project dependencies
+### Install project dependencies
 
 ```
 npm install
 ./bower.sh update
 ```
 
-## Build and run project
+### Build and run project
 
 ```
 ./gulp.sh
