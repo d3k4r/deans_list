@@ -59,9 +59,15 @@ gulp.task('server', function(){
     .pipe(gulp.dest('build'));
 });
 
+gulp.task('dot-psci', function(){
+  return gulp.src([paths.client, paths.server, paths.dependencies])
+    .pipe(purescript.dotPsci());
+});
+
 gulp.task('watch', function() {
   gulp.watch(paths.server, ['server']);
   gulp.watch(paths.client, ['client']);
+  gulp.watch([paths.client, paths.server], ['dot-psci']);
 });
 
 gulp.task('run-server', function () {
