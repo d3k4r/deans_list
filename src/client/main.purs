@@ -53,18 +53,17 @@ foreign import unsafeAppendToBody
     document.body.appendChild(child);
   }""" :: forall eff. Node -> (Eff (dom :: DOM | eff) Unit)
 
-parseBooks :: F [Book] -> [Book]
-parseBooks (Left _) = []
-parseBooks (Right books) = books
-
-getBooks :: forall a. Aff (ajax :: AJAX | a) [Book]
+getBooks :: forall a. Aff (ajax :: AJAX | a) (F [Book])
 getBooks = do
   res <- affjax $ defaultRequest { url = "/books", method = GET }
-  return $ parseBooks (readJSON res.response :: F [Book])
+  return $ readJSON res.response :: F [Book]
 
 main = launchAff $ do
-  books <- getBooks
-  let uiState = initUiState {books: books}
+  booksOrError <- getBooks
+  let parseBooks :: F [Book] -> [Book]
+      parseBooks (Left _) = []
+      parseBooks (Right books) = books
+  let uiState = initUiState {books: parseBooks booksOrError}
   uiStateRef <- liftEff $ ST.newSTRef uiState
   return $ unsafeAppendToBody uiState.dom
   
