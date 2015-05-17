@@ -2,7 +2,7 @@ module DeanList.Client.Main where
 
 import Debug.Trace (trace)
 import Data.Array (map, (..))
-import Data.Either (Either(Left, Right))
+import Data.Either (Either(Left, Right), either)
 import Data.Foreign (F(..))
 import Data.Foreign.Class (readJSON)
 import qualified VirtualDOM as VDom
@@ -53,17 +53,15 @@ foreign import unsafeAppendToBody
     document.body.appendChild(child);
   }""" :: forall eff. Node -> (Eff (dom :: DOM | eff) Unit)
 
-getBooks :: forall a. Aff (ajax :: AJAX | a) (F [Book])
+getBooks :: forall a. Aff (ajax :: AJAX | a) [Book]
 getBooks = do
   res <- affjax $ defaultRequest { url = "/books", method = GET }
-  return $ readJSON res.response :: F [Book]
+  let booksOrError = readJSON res.response :: F [Book]
+  return $ either (\e -> []) (\b -> b) booksOrError
 
 main = launchAff $ do
-  booksOrError <- getBooks
-  let parseBooks :: F [Book] -> [Book]
-      parseBooks (Left _) = []
-      parseBooks (Right books) = books
-  let uiState = initUiState {books: parseBooks booksOrError}
+  books <- getBooks
+  let uiState = initUiState {books: books}
   uiStateRef <- liftEff $ ST.newSTRef uiState
   return $ unsafeAppendToBody uiState.dom
   
