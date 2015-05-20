@@ -22,9 +22,13 @@ type UiState = { state :: AppState, virtual :: VTree, dom :: Node }
 bookPath :: Book -> String
 bookPath b = "books/" ++ b
 
+pureGrid :: String -> [VTree] -> VTree
+pureGrid ratio = vnode "div" {className: "pure-u-1 pure-u-lg-" ++ ratio}
+
 render :: AppState -> VTree
-render state = vnode "div" {className: "container"} [title, bookList]
+render state = vnode "div" {className: "container pure-g"} grids
   where
+    grids = [pureGrid "1-5" [], pureGrid "3-5" [title, bookList], pureGrid "1-5" []]
     title = vnode "h1" {className: "title"} [vtext "Dean's List"]
     bookList = vnode "div" {} bookItems
     bookItems = map (\b -> vnode "div" {className: "book"} [vnode "a" {href: bookPath b} [vtext b]]) state.books

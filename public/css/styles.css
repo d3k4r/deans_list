@@ -1,5 +1,9 @@
-body {
+html, button, input, select, textarea, .pure-g [class *= "pure-u"] {
   font-family: "Raleway",Lato,"Helvetica Neue",Helvetica,Arial,sans-serif;
+}
+
+@media screen and (min-width: 64em) {
+  body { font-size: 40%; }
 }
 
 a {
@@ -21,21 +25,21 @@ a:hover, a:active {
   font-family: 'Raleway';
   font-style: normal;
   font-weight: 200;
-  src: local('Raleway ExtraLight'), local('Raleway-ExtraLight'), url(http://fonts.gstatic.com/s/raleway/v9/8KhZd3VQBtXTAznvKjw-k_k_vArhqVIZ0nv9q090hN8.woff2) format('woff2'), url(http://fonts.gstatic.com/s/raleway/v9/8KhZd3VQBtXTAznvKjw-kxsxEYwM7FgeyaSgU71cLG0.woff) format('woff');
+  src: local('Raleway ExtraLight'), local('Raleway-ExtraLight'), url(https://fonts.gstatic.com/s/raleway/v9/8KhZd3VQBtXTAznvKjw-k_k_vArhqVIZ0nv9q090hN8.woff2) format('woff2'), url(http://fonts.gstatic.com/s/raleway/v9/8KhZd3VQBtXTAznvKjw-kxsxEYwM7FgeyaSgU71cLG0.woff) format('woff');
 }
 
 .container {
-  width: 300px;
-  margin-left: auto;
-  margin-right: auto;
+  margin: 0 20px 0 20px;
 }
 
 .title {
-  font-size: 3em;
+  font-size: 6em;
   text-shadow: 1px 1px 1px #aaaaaa;
+  margin: 20px 0 20px 0;
 }
 
 .book {
-  font-size: 1.5em;
-  margin: 5px 0 5px 0;
+  font-size: 4em;
+  margin: 10px 0 10px 0;
+  white-space: nowrap;
 }
