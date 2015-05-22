@@ -62,7 +62,7 @@ foreign import unsafeAppendToBody
 
 getBooks :: forall a. Aff (ajax :: AJAX | a) [Book]
 getBooks = do
-  res <- affjax $ defaultRequest { url = "/books", method = GET }
+  res <- affjax $ defaultRequest { url = "books/", method = GET }
   let booksOrError = readJSON res.response :: F [Book]
   return $ either (\e -> []) (\b -> b) booksOrError
 
