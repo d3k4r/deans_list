@@ -23,7 +23,10 @@ import Node.FS.Sync (readdir, readTextFile)
 foreign import staticMiddleware "var staticMiddleware = require('express').static"
     :: String -> Fn3 Request Response (ExpressM Unit) (ExpressM Unit)
 
-type Book = String
+data Book = Book String String
+
+instance showBook :: Show Book where
+  show (Book title url) = "[Book " ++ title ++ " (" ++ url ++ ")]"
 
 booksUrl = "http://localhost:3456/uri/URI%3ADIR2%3Arilot7zn3ycl6lmngkd5iab3pm%3Ahzko5cxtvwevu33qbyv72b3mn5tfzl7l7igllceqiax6akkc6clq/?t=json"
 
@@ -37,18 +40,18 @@ parseLafsToBooks :: String -> String
 parseLafsToBooks s = show $ parseResponse json
   where
     json = decode s :: Maybe JArray
-    parseResponse :: Maybe JArray -> String
+    parseResponse :: Maybe JArray -> [Book]
     parseResponse (Just (_:dirInfo:_)) = parseDirInfo dirInfo
-    parseResponse _ = "unparseable resp"
-    parseDirInfo :: JValue -> String
+    parseResponse _ = []
+    parseDirInfo :: JValue -> [Book]
     parseDirInfo (JObject dirInfo) = parseChildren $ lookup "children" dirInfo
-    parseDirInfo _ = "unparseable dir"
-    parseChildren :: Maybe JValue -> String
-    parseChildren (Just (JObject j)) = foldl (\all s -> all ++ " " ++ s) "" $ map parseChild $ toList j
-    parseChildren _ = "unparseable children"
-    parseChild :: Tuple String JValue -> String
-    parseChild (Tuple title (JArray j)) = title ++ " " ++ (parseBookData j)
-    parseChild _ = "unparseable child"
+    parseDirInfo _ = []
+    parseChildren :: Maybe JValue -> [Book]
+    parseChildren (Just (JObject j)) = map parseChild $ toList j
+    parseChildren _ = []
+    parseChild :: Tuple String JValue -> Book
+    parseChild (Tuple title (JArray j)) = Book title (parseBookData j)
+    parseChild _ = Book "dummytitle" "dummyurl"
     parseBookData :: JArray -> String
     parseBookData (_:(JObject fileInfo):_) = parseBookLink $ lookup "ro_uri" fileInfo
     parseBookData _ = "unparseable book data"
