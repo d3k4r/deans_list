@@ -1,18 +1,21 @@
 module DeanList.Server.Main where 
 
+import Control.Monad.Eff (Eff(..))
+import Control.Monad.Eff.Class (liftEff)
+import Control.Monad.Eff.Exception (Error(..), message)
 import Debug.Trace (trace, print)
 import Data.Foldable (foldl)
 import Data.Function (Fn3(..))
 import Data.Foreign.EasyFFI (unsafeForeignFunction)
-import Control.Monad.Eff.Class (liftEff)
-import Control.Monad.Eff.Exception (Error(..), message)
-import Node.Express.Types (Request(..), Response(..), ExpressM(..))
-import Node.Express.App (App(..), listenHttp, use, useExternal, useOnError, get)
-import Node.Express.Handler (Handler(..), setStatus, send, sendJson, getOriginalUrl, next, capture)
-import Node.FS.Sync (readdir)
+import Data.JSON (JValue(..), JArray(..), decode)
+import Data.Maybe (Maybe(Just, Nothing))
 import Network.HTTP.Affjax (AJAX(..), affjax, defaultRequest)
 import Network.HTTP.Method (Method(GET))
-import Control.Monad.Eff (Eff(..))
+import Node.Encoding (Encoding(UTF8))
+import Node.Express.App (App(..), listenHttp, use, useExternal, useOnError, get)
+import Node.Express.Handler (Handler(..), setStatus, send, sendJson, getOriginalUrl, next, capture)
+import Node.Express.Types (Request(..), Response(..), ExpressM(..))
+import Node.FS.Sync (readdir, readTextFile)
 
 foreign import staticMiddleware "var staticMiddleware = require('express').static"
     :: String -> Fn3 Request Response (ExpressM Unit) (ExpressM Unit)
@@ -27,12 +30,21 @@ logger = do
     liftEff $ trace url
     next
     
+parseLafsToBooks :: String -> String
+parseLafsToBooks s = show $ firstVal json
+  where
+    firstVal :: Maybe JArray -> String
+    firstVal Nothing = "nothing!"
+    firstVal (Just []) = "empty list!"
+    firstVal (Just (x:xs)) = show x
+    json = decode s :: Maybe JArray
+    
 books :: Handler
 books = do
-    --files <- liftEff $ readdir "public/books"
-    callback <- capture $ \s -> sendJson s
-    liftEff $ unsafeHttpGet booksUrl callback
-    --sendJson files
+  files <- liftEff $ readTextFile UTF8 "dummy_response2"
+  send $ parseLafsToBooks files
+    -- callback <- capture (\s -> sendJson $ parseLafsToBooks s)
+    -- liftEff $ unsafeHttpGet booksUrl callback
     
 errorHandler :: Error -> Handler
 errorHandler err = do
@@ -58,21 +70,9 @@ function unsafeHttpGet(url) {
     var request = require('request');
     request(url, function(error, response, body){
       console.log('Got body');
-      console.log('body:', body);
-      console.log('response:', response);
+      console.log(body);
       onResponse(body)();
     });
   }
   }
-}""" :: forall eff. String -> (String -> Eff ( | eff) Unit) -> (Eff ( | eff) Unit)
-
---getBooks :: forall a. Aff (ajax :: AJAX | a) [String]
---getBooks = do
---  res <- affjax $ defaultRequest { url = booksUrl, method = GET }
---  liftEff $ print res.response
---  let booksOrError = readJSON res.response :: F [String]
---  return $ either (\e -> []) (\b -> b) booksOrError
-
---main = launchAff $ do
---  books <- getBooks
---  liftEff $ trace $ show books
+}""" :: forall eff. String -> (String -> Eff ( | eff) Unit) -> Eff ( | eff) Unit

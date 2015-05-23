@@ -20,6 +20,7 @@
     "purescript-simple-dom": "~0.0.2",
     "purescript-aff": "~0.10.1",
     "purescript-affjax": "~0.2.1",
-    "purescript-foreign": "~0.4.2"
+    "purescript-foreign": "~0.4.2",
+    "purescript-json": "~0.4.8"
   }
 }
