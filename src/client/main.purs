@@ -1,5 +1,7 @@
 module DeanList.Client.Main where
 
+import DeanList.Client.Html (div, pureUnit, h1, a)
+
 import Debug.Trace (trace)
 import Data.Array (map, (..))
 import Data.Either (Either(Left, Right), either)
@@ -22,16 +24,13 @@ type UiState = { state :: AppState, virtual :: VTree, dom :: Node }
 bookPath :: Book -> String
 bookPath b = "books/" ++ b
 
-pureGrid :: String -> [VTree] -> VTree
-pureGrid ratio = vnode "div" {className: "pure-u-1 pure-u-lg-" ++ ratio}
-
 render :: AppState -> VTree
-render state = vnode "div" {className: "container pure-g"} grids
+render state = div {className: "container pure-g"} grids
   where
-    grids = [pureGrid "1-5" [], pureGrid "3-5" [title, bookList], pureGrid "1-5" []]
-    title = vnode "h1" {className: "title"} [vtext "Dean's List"]
-    bookList = vnode "div" {} bookItems
-    bookItems = map (\b -> vnode "div" {className: "book"} [vnode "a" {href: bookPath b} [vtext b]]) state.books
+    grids = [h1 {} [], pureUnit "1-5" [], pureUnit "3-5" [title, bookList], pureUnit "1-5" []]
+    title = h1 {className: "title"} [vtext "Dean's List"]
+    bookList = div {} bookItems
+    bookItems = map (\b -> div {className: "book"} [a {href: bookPath b} [vtext b]]) state.books
 
 initUiState :: AppState -> UiState
 initUiState state = { state: state, virtual: virtual, dom: dom }
