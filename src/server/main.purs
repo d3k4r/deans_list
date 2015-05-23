@@ -8,6 +8,7 @@ import Data.Foldable (foldl)
 import Data.Function (Fn3(..))
 import Data.Foreign.EasyFFI (unsafeForeignFunction)
 import Data.JSON (JValue(..), JArray(..), decode)
+import Data.Map (lookup)
 import Data.Maybe (Maybe(Just, Nothing))
 import Network.HTTP.Affjax (AJAX(..), affjax, defaultRequest)
 import Network.HTTP.Method (Method(GET))
@@ -31,13 +32,18 @@ logger = do
     next
     
 parseLafsToBooks :: String -> String
-parseLafsToBooks s = show $ firstVal json
+parseLafsToBooks s = show $ parseResponse json
   where
-    firstVal :: Maybe JArray -> String
-    firstVal Nothing = "nothing!"
-    firstVal (Just []) = "empty list!"
-    firstVal (Just (x:xs)) = show x
     json = decode s :: Maybe JArray
+    parseResponse :: Maybe JArray -> String
+    parseResponse (Just (_:dirInfo:_)) = parseDirInfo dirInfo
+    parseResponse _ = "unparseable"
+    parseDirInfo :: JValue -> String
+    parseDirInfo (JObject dirInfo) = parseChildren $ lookup "children" dirInfo
+    parseDirInfo _ = "unparseable"
+    parseChildren :: Maybe JValue -> String
+    parseChildren (Just (JObject j)) = "children"
+    parseChildren _ = "unparseable"
     
 books :: Handler
 books = do
