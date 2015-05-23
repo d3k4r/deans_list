@@ -8,7 +8,7 @@ import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff.Exception (Error(..), message)
 import Node.Express.Types (Request(..), Response(..), ExpressM(..))
 import Node.Express.App (App(..), listenHttp, use, useExternal, useOnError, get)
-import Node.Express.Handler (Handler(..), setStatus, sendJson, getOriginalUrl, next)
+import Node.Express.Handler (Handler(..), setStatus, send, sendJson, getOriginalUrl, next, capture)
 import Node.FS.Sync (readdir)
 import Network.HTTP.Affjax (AJAX(..), affjax, defaultRequest)
 import Network.HTTP.Method (Method(GET))
@@ -29,9 +29,10 @@ logger = do
     
 books :: Handler
 books = do
-    files <- liftEff $ readdir "public/books"
-    liftEff $ unsafeHttpGet booksUrl (\s -> trace ("response" ++ s))
-    sendJson files
+    --files <- liftEff $ readdir "public/books"
+    callback <- capture $ \s -> sendJson s
+    liftEff $ unsafeHttpGet booksUrl callback
+    --sendJson files
     
 errorHandler :: Error -> Handler
 errorHandler err = do
@@ -57,6 +58,8 @@ function unsafeHttpGet(url) {
     var request = require('request');
     request(url, function(error, response, body){
       console.log('Got body');
+      console.log('body:', body);
+      console.log('response:', response);
       onResponse(body)();
     });
   }
