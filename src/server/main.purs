@@ -30,6 +30,7 @@ logger = do
 books :: Handler
 books = do
     files <- liftEff $ readdir "public/books"
+    liftEff $ unsafeHttpGet booksUrl (\s -> trace ("response" ++ s))
     sendJson files
     
 errorHandler :: Error -> Handler
@@ -46,11 +47,7 @@ appSetup = do
     
 main = do
   port <- unsafeForeignFunction [""] "process.env.PORT || 8080"
-  unsafeHttpGet booksUrl onResponse
   listenHttp appSetup port \_ -> trace $ "Server running on localhost:" ++ show port
-  where
-    --onResponse :: forall eff. String -> Eff ( | eff) Unit
-    onResponse s = trace ("response: " ++ s)
 
 foreign import unsafeHttpGet
 """
