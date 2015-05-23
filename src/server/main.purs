@@ -54,20 +54,13 @@ foreign import unsafeHttpGet
 function unsafeHttpGet(url) {
   return function(onResponse){
   return function() {
-  var http = require('http');
-  http.get(url, function(res) {
-    console.log('Got response:\n' + res.statusCode);
-    res.setEncoding('utf-8');
-    res.on('data', function(chunk) {
-      console.log('Got chunk, pass to ps');
-      console.log('onResponse:', onResponse);
-      onResponse(chunk)();
+    var request = require('request');
+    request(url, function(error, response, body){
+      console.log('Got body');
+      onResponse(body)();
     });
-  }).on('error', function(e) {
-    console.log('Got error: ' + e.message);
-  });
-  };
-  };
+  }
+  }
 }""" :: forall eff. String -> (String -> Eff ( | eff) Unit) -> (Eff ( | eff) Unit)
 
 --getBooks :: forall a. Aff (ajax :: AJAX | a) [String]
