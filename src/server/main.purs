@@ -19,7 +19,7 @@ foreign import staticMiddleware "var staticMiddleware = require('express').stati
 
 type Book = String
 
-booksUrl = "localhost:3456/uri/URI%3ADIR2%3Arilot7zn3ycl6lmngkd5iab3pm%3Ahzko5cxtvwevu33qbyv72b3mn5tfzl7l7igllceqiax6akkc6clq/?t=json"
+booksUrl = "http://localhost:3456/uri/URI%3ADIR2%3Arilot7zn3ycl6lmngkd5iab3pm%3Ahzko5cxtvwevu33qbyv72b3mn5tfzl7l7igllceqiax6akkc6clq/?t=json"
 
 logger :: Handler
 logger = do
@@ -46,23 +46,32 @@ appSetup = do
     
 main = do
   port <- unsafeForeignFunction [""] "process.env.PORT || 8080"
-  unsafeHttpGet
+  unsafeHttpGet booksUrl onResponse
   listenHttp appSetup port \_ -> trace $ "Server running on localhost:" ++ show port
+  where
+    --onResponse :: forall eff. String -> Eff ( | eff) Unit
+    onResponse s = trace ("response: " ++ s)
 
 foreign import unsafeHttpGet
 """
-function unsafeHttpGet() {
+function unsafeHttpGet(url) {
+  return function(onResponse){
+  return function() {
   var http = require('http');
-  http.get("http://localhost:3456/uri/URI%3ADIR2%3Arilot7zn3ycl6lmngkd5iab3pm%3Ahzko5cxtvwevu33qbyv72b3mn5tfzl7l7igllceqiax6akkc6clq/?t=json", function(res) {
-    console.log("Got response:\n" + res);
+  http.get(url, function(res) {
+    console.log('Got response:\n' + res.statusCode);
     res.setEncoding('utf-8');
     res.on('data', function(chunk) {
-	    console.log('Chunk:', chunk);
+      console.log('Got chunk, pass to ps');
+      console.log('onResponse:', onResponse);
+      onResponse(chunk)();
     });
   }).on('error', function(e) {
-    console.log("Got error: " + e.message);
+    console.log('Got error: ' + e.message);
   });
-}""" :: forall eff. (Eff ( | eff) Unit)
+  };
+  };
+}""" :: forall eff. String -> (String -> Eff ( | eff) Unit) -> (Eff ( | eff) Unit)
 
 --getBooks :: forall a. Aff (ajax :: AJAX | a) [String]
 --getBooks = do
