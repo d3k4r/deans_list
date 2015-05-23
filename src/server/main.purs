@@ -1,6 +1,6 @@
 module DeanList.Server.Main where 
 
-import Debug.Trace (trace)
+import Debug.Trace (trace, print)
 import Data.Foldable (foldl)
 import Data.Function (Fn3(..))
 import Data.Foreign.EasyFFI (unsafeForeignFunction)
@@ -10,9 +10,16 @@ import Node.Express.Types (Request(..), Response(..), ExpressM(..))
 import Node.Express.App (App(..), listenHttp, use, useExternal, useOnError, get)
 import Node.Express.Handler (Handler(..), setStatus, sendJson, getOriginalUrl, next)
 import Node.FS.Sync (readdir)
+import Network.HTTP.Affjax (AJAX(..), affjax, defaultRequest)
+import Network.HTTP.Method (Method(GET))
+import Control.Monad.Eff (Eff(..))
 
 foreign import staticMiddleware "var staticMiddleware = require('express').static"
     :: String -> Fn3 Request Response (ExpressM Unit) (ExpressM Unit)
+
+type Book = String
+
+booksUrl = "localhost:3456/uri/URI%3ADIR2%3Arilot7zn3ycl6lmngkd5iab3pm%3Ahzko5cxtvwevu33qbyv72b3mn5tfzl7l7igllceqiax6akkc6clq/?t=json"
 
 logger :: Handler
 logger = do
@@ -39,4 +46,31 @@ appSetup = do
     
 main = do
   port <- unsafeForeignFunction [""] "process.env.PORT || 8080"
+  unsafeHttpGet
   listenHttp appSetup port \_ -> trace $ "Server running on localhost:" ++ show port
+
+foreign import unsafeHttpGet
+"""
+function unsafeHttpGet() {
+  var http = require('http');
+  http.get("http://localhost:3456/uri/URI%3ADIR2%3Arilot7zn3ycl6lmngkd5iab3pm%3Ahzko5cxtvwevu33qbyv72b3mn5tfzl7l7igllceqiax6akkc6clq/?t=json", function(res) {
+    console.log("Got response:\n" + res);
+    res.setEncoding('utf-8');
+    res.on('data', function(chunk) {
+	    console.log('Chunk:', chunk);
+    });
+  }).on('error', function(e) {
+    console.log("Got error: " + e.message);
+  });
+}""" :: forall eff. (Eff ( | eff) Unit)
+
+--getBooks :: forall a. Aff (ajax :: AJAX | a) [String]
+--getBooks = do
+--  res <- affjax $ defaultRequest { url = booksUrl, method = GET }
+--  liftEff $ print res.response
+--  let booksOrError = readJSON res.response :: F [String]
+--  return $ either (\e -> []) (\b -> b) booksOrError
+
+--main = launchAff $ do
+--  books <- getBooks
+--  liftEff $ trace $ show books
