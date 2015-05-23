@@ -4,12 +4,14 @@ import Control.Monad.Eff (Eff(..))
 import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff.Exception (Error(..), message)
 import Debug.Trace (trace, print)
+import Data.Array (map)
 import Data.Foldable (foldl)
 import Data.Function (Fn3(..))
 import Data.Foreign.EasyFFI (unsafeForeignFunction)
-import Data.JSON (JValue(..), JArray(..), decode)
-import Data.Map (lookup)
+import Data.JSON (JValue(JObject, JArray, JString), JObject(..), JArray(..), decode)
+import Data.Map (lookup, toList)
 import Data.Maybe (Maybe(Just, Nothing))
+import Data.Tuple (Tuple(..))
 import Network.HTTP.Affjax (AJAX(..), affjax, defaultRequest)
 import Network.HTTP.Method (Method(GET))
 import Node.Encoding (Encoding(UTF8))
@@ -37,13 +39,22 @@ parseLafsToBooks s = show $ parseResponse json
     json = decode s :: Maybe JArray
     parseResponse :: Maybe JArray -> String
     parseResponse (Just (_:dirInfo:_)) = parseDirInfo dirInfo
-    parseResponse _ = "unparseable"
+    parseResponse _ = "unparseable resp"
     parseDirInfo :: JValue -> String
     parseDirInfo (JObject dirInfo) = parseChildren $ lookup "children" dirInfo
-    parseDirInfo _ = "unparseable"
+    parseDirInfo _ = "unparseable dir"
     parseChildren :: Maybe JValue -> String
-    parseChildren (Just (JObject j)) = "children"
-    parseChildren _ = "unparseable"
+    parseChildren (Just (JObject j)) = foldl (\all s -> all ++ " " ++ s) "" $ map parseChild $ toList j
+    parseChildren _ = "unparseable children"
+    parseChild :: Tuple String JValue -> String
+    parseChild (Tuple title (JArray j)) = title ++ " " ++ (parseBookData j)
+    parseChild _ = "unparseable child"
+    parseBookData :: JArray -> String
+    parseBookData (_:(JObject fileInfo):_) = parseBookLink $ lookup "ro_uri" fileInfo
+    parseBookData _ = "unparseable book data"
+    parseBookLink :: Maybe JValue -> String
+    parseBookLink (Just (JString s)) = s
+    parseBookLink _ = "unparseable book link"
     
 books :: Handler
 books = do
