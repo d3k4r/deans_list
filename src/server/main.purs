@@ -1,5 +1,6 @@
 module DeanList.Server.Main where 
 
+import Control.Apply (lift2)
 import Control.Monad.Eff (Eff(..))
 import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff.Exception (Error(..), message)
@@ -8,9 +9,9 @@ import Data.Array (map)
 import Data.Foldable (foldl)
 import Data.Function (Fn3(..))
 import Data.Foreign.EasyFFI (unsafeForeignFunction)
-import Data.JSON (JValue(JObject, JArray, JString), JObject(..), JArray(..), decode)
-import Data.Map (lookup, toList)
-import Data.Maybe (Maybe(Just, Nothing))
+import Data.JSON (JValue(..), JObject(..), JArray(..), ToJSON, encode, decode, object, Pair(..))
+import Data.Map (Map(..), lookup, toList, fromList)
+import Data.Maybe (Maybe(Just, Nothing), maybe)
 import Data.Tuple (Tuple(..))
 import Network.HTTP.Affjax (AJAX(..), affjax, defaultRequest)
 import Network.HTTP.Method (Method(GET))
@@ -23,10 +24,13 @@ import Node.FS.Sync (readdir, readTextFile)
 foreign import staticMiddleware "var staticMiddleware = require('express').static"
     :: String -> Fn3 Request Response (ExpressM Unit) (ExpressM Unit)
 
-data Book = Book String String
+data Book = Book {title :: String, url :: String}
 
-instance showBook :: Show Book where
-  show (Book title url) = "[Book " ++ title ++ " (" ++ url ++ ")]"
+instance bookToJSON :: ToJSON Book where
+  toJSON (Book b) = object [Tuple "title" (JString b.title), Tuple "url" (JString b.url)]
+  
+book :: String -> String -> Book
+book title url = Book {title: title, url: url}
 
 booksUrl = "http://localhost:3456/uri/URI%3ADIR2%3Arilot7zn3ycl6lmngkd5iab3pm%3Ahzko5cxtvwevu33qbyv72b3mn5tfzl7l7igllceqiax6akkc6clq/?t=json"
 
@@ -36,33 +40,38 @@ logger = do
     liftEff $ trace url
     next
     
-parseLafsToBooks :: String -> String
-parseLafsToBooks s = show $ parseResponse json
+catMaybe :: forall a. [Maybe a] -> [a]
+catMaybe [] = []
+catMaybe (Just x : xs) = [x] ++ (catMaybe xs)
+catMaybe (Nothing : xs) = catMaybe xs
+    
+parseBooks :: String -> [Book]
+parseBooks dirInfoResponse = maybe [] parseResponse maybeJson
   where
-    json = decode s :: Maybe JArray
-    parseResponse :: Maybe JArray -> [Book]
-    parseResponse (Just (_:dirInfo:_)) = parseDirInfo dirInfo
+    maybeJson = decode dirInfoResponse :: Maybe JArray
+    parseResponse :: JArray -> [Book]
+    parseResponse (_:dirInfo:_) = parseDirInfo dirInfo
     parseResponse _ = []
     parseDirInfo :: JValue -> [Book]
     parseDirInfo (JObject dirInfo) = parseChildren $ lookup "children" dirInfo
     parseDirInfo _ = []
     parseChildren :: Maybe JValue -> [Book]
-    parseChildren (Just (JObject j)) = map parseChild $ toList j
+    parseChildren (Just (JObject j)) = catMaybe $ map parseChild $ toList j
     parseChildren _ = []
-    parseChild :: Tuple String JValue -> Book
-    parseChild (Tuple title (JArray j)) = Book title (parseBookData j)
-    parseChild _ = Book "dummytitle" "dummyurl"
-    parseBookData :: JArray -> String
-    parseBookData (_:(JObject fileInfo):_) = parseBookLink $ lookup "ro_uri" fileInfo
-    parseBookData _ = "unparseable book data"
-    parseBookLink :: Maybe JValue -> String
-    parseBookLink (Just (JString s)) = s
-    parseBookLink _ = "unparseable book link"
+    parseChild :: Tuple String JValue -> Maybe Book
+    parseChild (Tuple title (JArray j)) = book <$> (Just title) <*> (parseBookData j)
+    parseChild _ = Nothing
+    parseBookData :: JArray -> Maybe String
+    parseBookData (_:(JObject fileInfo):_) = maybeLink $ lookup "ro_uri" fileInfo
+    parseBookData _ = Nothing
+    maybeLink :: Maybe JValue -> Maybe String
+    maybeLink (Just (JString s)) = Just s
+    maybeLink _ = Nothing
     
-books :: Handler
-books = do
-  files <- liftEff $ readTextFile UTF8 "dummy_response2"
-  send $ parseLafsToBooks files
+getBooks :: Handler
+getBooks = do
+  dirInfo <- liftEff $ readTextFile UTF8 "dummy_response2"
+  sendJson $ encode $ parseBooks dirInfo
     -- callback <- capture (\s -> sendJson $ parseLafsToBooks s)
     -- liftEff $ unsafeHttpGet booksUrl callback
     
@@ -76,7 +85,7 @@ appSetup = do
     use logger
     useExternal $ staticMiddleware "public"
     useOnError errorHandler
-    get "/books" books
+    get "/books" getBooks
     
 main = do
   port <- unsafeForeignFunction [""] "process.env.PORT || 8080"
