@@ -6,7 +6,7 @@ import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff.Exception (Error(..), message)
 import Control.MonadPlus (guard)
 import Debug.Trace (trace, print)
-import Data.Array (map, catMaybes)
+import Data.Array (map, catMaybes, (!!))
 import Data.Foldable (foldl)
 import Data.Function (Fn3(..))
 import Data.Foreign.EasyFFI (unsafeForeignFunction)
@@ -46,13 +46,11 @@ parseBooks dirInfoResponse = maybe [] parseResponse maybeJson
   where
     maybeJson = decode dirInfoResponse :: Maybe JArray
     parseResponse :: JArray -> [Book]
-    parseResponse (_:dirInfo:_) = parseDirInfo dirInfo
-    parseResponse _ = []
+    parseResponse arr = maybe [] parseDirInfo (arr !! 1)
     parseDirInfo :: JValue -> [Book]
-    parseDirInfo (JObject dirInfo) = parseChildren $ lookup "children" dirInfo
-    parseDirInfo _ = []
-    parseChildren :: Maybe JValue -> [Book]
-    parseChildren (Just (JObject j)) = catMaybes $ map parseChild $ toList j
+    parseDirInfo (JObject dirInfo) = maybe [] parseChildren $ lookup "children" dirInfo
+    parseChildren :: JValue -> [Book]
+    parseChildren (JObject j) = catMaybes $ map parseChild $ toList j
     parseChildren _ = []
     parseChild :: Tuple String JValue -> Maybe Book
     parseChild (Tuple title (JArray j)) = book <$> (Just title) <*> (parseBookUrl j)
