@@ -6,7 +6,7 @@ import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff.Exception (Error(..), message)
 import Control.MonadPlus (guard)
 import Debug.Trace (trace, print)
-import Data.Array (map, concatMap)
+import Data.Array (map, catMaybes)
 import Data.Foldable (foldl)
 import Data.Function (Fn3(..))
 import Data.Foreign.EasyFFI (unsafeForeignFunction)
@@ -40,9 +40,6 @@ logger = do
     url <- getOriginalUrl
     liftEff $ trace url
     next
-    
-catMaybes :: forall a. [Maybe a] -> [a]
-catMaybes = concatMap (maybe [] (\m1 -> [m1]))
     
 parseBooks :: String -> [Book]
 parseBooks dirInfoResponse = maybe [] parseResponse maybeJson
