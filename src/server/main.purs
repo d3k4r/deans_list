@@ -4,14 +4,15 @@ import Control.Apply (lift2)
 import Control.Monad.Eff (Eff(..))
 import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff.Exception (Error(..), message)
+import Control.MonadPlus (guard)
 import Debug.Trace (trace, print)
-import Data.Array (map)
+import Data.Array (map, concatMap)
 import Data.Foldable (foldl)
 import Data.Function (Fn3(..))
 import Data.Foreign.EasyFFI (unsafeForeignFunction)
 import Data.JSON (JValue(..), JObject(..), JArray(..), ToJSON, encode, decode, object, Pair(..))
 import Data.Map (Map(..), lookup, toList, fromList)
-import Data.Maybe (Maybe(Just, Nothing), maybe)
+import Data.Maybe (Maybe(Just, Nothing), maybe, isJust)
 import Data.Tuple (Tuple(..))
 import Network.HTTP.Affjax (AJAX(..), affjax, defaultRequest)
 import Network.HTTP.Method (Method(GET))
@@ -40,10 +41,8 @@ logger = do
     liftEff $ trace url
     next
     
-catMaybe :: forall a. [Maybe a] -> [a]
-catMaybe [] = []
-catMaybe (Just x : xs) = [x] ++ (catMaybe xs)
-catMaybe (Nothing : xs) = catMaybe xs
+catMaybes :: forall a. [Maybe a] -> [a]
+catMaybes = concatMap (maybe [] (\m1 -> [m1]))
     
 parseBooks :: String -> [Book]
 parseBooks dirInfoResponse = maybe [] parseResponse maybeJson
@@ -56,17 +55,17 @@ parseBooks dirInfoResponse = maybe [] parseResponse maybeJson
     parseDirInfo (JObject dirInfo) = parseChildren $ lookup "children" dirInfo
     parseDirInfo _ = []
     parseChildren :: Maybe JValue -> [Book]
-    parseChildren (Just (JObject j)) = catMaybe $ map parseChild $ toList j
+    parseChildren (Just (JObject j)) = catMaybes $ map parseChild $ toList j
     parseChildren _ = []
     parseChild :: Tuple String JValue -> Maybe Book
-    parseChild (Tuple title (JArray j)) = book <$> (Just title) <*> (parseBookData j)
+    parseChild (Tuple title (JArray j)) = book <$> (Just title) <*> (parseBookUrl j)
     parseChild _ = Nothing
-    parseBookData :: JArray -> Maybe String
-    parseBookData (_:(JObject fileInfo):_) = maybeLink $ lookup "ro_uri" fileInfo
-    parseBookData _ = Nothing
-    maybeLink :: Maybe JValue -> Maybe String
-    maybeLink (Just (JString s)) = Just s
-    maybeLink _ = Nothing
+    parseBookUrl :: JArray -> Maybe String
+    parseBookUrl (_:(JObject fileInfo):_) = maybeUrl $ lookup "ro_uri" fileInfo
+    parseBookUrl _ = Nothing
+    maybeUrl :: Maybe JValue -> Maybe String
+    maybeUrl (Just (JString s)) = Just s
+    maybeUrl _ = Nothing
     
 getBooks :: Handler
 getBooks = do
