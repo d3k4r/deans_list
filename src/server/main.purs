@@ -13,7 +13,7 @@ import Data.Foreign.EasyFFI (unsafeForeignFunction)
 import Data.JSON (JValue(..), JObject(..), JArray(..), ToJSON, encode, decode, object, Pair(..))
 import Data.Map (Map(..), lookup, toList, fromList)
 import Data.Maybe (Maybe(Just, Nothing), maybe, isJust, fromMaybe)
-import Data.Tuple (Tuple(..))
+import Data.Tuple (Tuple(..), uncurry)
 import Network.HTTP.Affjax (AJAX(..), affjax, defaultRequest)
 import Network.HTTP.Method (Method(GET))
 import Node.Encoding (Encoding(UTF8))
@@ -29,9 +29,6 @@ data Book = Book {title :: String, url :: String}
 
 instance bookToJSON :: ToJSON Book where
   toJSON (Book b) = object [Tuple "title" (JString b.title), Tuple "url" (JString b.url)]
-  
-book :: String -> String -> Book
-book title url = Book {title: title, url: url}
 
 booksUrl = "http://localhost:3456/uri/URI%3ADIR2%3Arilot7zn3ycl6lmngkd5iab3pm%3Ahzko5cxtvwevu33qbyv72b3mn5tfzl7l7igllceqiax6akkc6clq/?t=json"
 
@@ -39,22 +36,24 @@ asObject :: JValue -> Maybe JObject
 asObject (JObject j) = (Just j)
 asObject _ = Nothing
 
+asString :: JValue -> Maybe String
+asString (JString s) = (Just s)
+asString _ = Nothing
+
 logger :: Handler
 logger = do
     url <- getOriginalUrl
     liftEff $ trace url
     next
     
-parseBook :: Tuple String JValue -> Maybe Book
-parseBook (Tuple title (JArray j)) = book <$> (Just title) <*> (parseBookUrl j)
-  where
-    parseBookUrl :: JArray -> Maybe String
-    parseBookUrl (_:(JObject fileInfo):_) = maybeUrl $ lookup "ro_uri" fileInfo
-    parseBookUrl _ = Nothing
-    maybeUrl :: Maybe JValue -> Maybe String
-    maybeUrl (Just (JString s)) = Just s
-    maybeUrl _ = Nothing
-parseBook _ = Nothing
+parseBook :: String -> JValue -> Maybe Book
+parseBook title (JArray bookInfoArray) = do
+  fileInfo <- (bookInfoArray !! 1)
+  fileInfoObj <- asObject fileInfo
+  bookUrl <- lookup "ro_uri" fileInfoObj
+  bookUrl' <- asString bookUrl
+  return $ Book {title: title, url: bookUrl'}
+parseBook _ _ = Nothing
     
 parseBooks :: String -> Maybe [Book]
 parseBooks response = do
@@ -64,7 +63,7 @@ parseBooks response = do
   children <- lookup "children" dirInfoObj
   childrenObj <- asObject children
   childrenList <- Just $ toList childrenObj
-  books <- Just $ mapMaybe parseBook childrenList
+  books <- Just $ mapMaybe (uncurry parseBook) childrenList
   return books
     
 getBooks :: Handler
