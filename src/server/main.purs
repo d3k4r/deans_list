@@ -6,13 +6,13 @@ import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff.Exception (Error(..), message)
 import Control.MonadPlus (guard)
 import Debug.Trace (trace, print)
-import Data.Array (map, catMaybes, (!!))
+import Data.Array (map, catMaybes, mapMaybe, (!!))
 import Data.Foldable (foldl)
 import Data.Function (Fn3(..))
 import Data.Foreign.EasyFFI (unsafeForeignFunction)
 import Data.JSON (JValue(..), JObject(..), JArray(..), ToJSON, encode, decode, object, Pair(..))
 import Data.Map (Map(..), lookup, toList, fromList)
-import Data.Maybe (Maybe(Just, Nothing), maybe, isJust)
+import Data.Maybe (Maybe(Just, Nothing), maybe, isJust, fromMaybe)
 import Data.Tuple (Tuple(..))
 import Network.HTTP.Affjax (AJAX(..), affjax, defaultRequest)
 import Network.HTTP.Method (Method(GET))
@@ -35,39 +35,43 @@ book title url = Book {title: title, url: url}
 
 booksUrl = "http://localhost:3456/uri/URI%3ADIR2%3Arilot7zn3ycl6lmngkd5iab3pm%3Ahzko5cxtvwevu33qbyv72b3mn5tfzl7l7igllceqiax6akkc6clq/?t=json"
 
+asObject :: JValue -> Maybe JObject
+asObject (JObject j) = (Just j)
+asObject _ = Nothing
+
 logger :: Handler
 logger = do
     url <- getOriginalUrl
     liftEff $ trace url
     next
     
-parseBooks :: String -> [Book]
-parseBooks dirInfoResponse = maybe [] parseResponse maybeJson
+parseBook :: Tuple String JValue -> Maybe Book
+parseBook (Tuple title (JArray j)) = book <$> (Just title) <*> (parseBookUrl j)
   where
-    maybeJson = decode dirInfoResponse :: Maybe JArray
-    parseResponse :: JArray -> [Book]
-    parseResponse arr = maybe [] parseDirInfo (arr !! 1)
-    parseDirInfo :: JValue -> [Book]
-    parseDirInfo (JObject dirInfo) = maybe [] parseChildren $ lookup "children" dirInfo
-    parseChildren :: JValue -> [Book]
-    parseChildren (JObject j) = catMaybes $ map parseChild $ toList j
-    parseChildren _ = []
-    parseChild :: Tuple String JValue -> Maybe Book
-    parseChild (Tuple title (JArray j)) = book <$> (Just title) <*> (parseBookUrl j)
-    parseChild _ = Nothing
     parseBookUrl :: JArray -> Maybe String
     parseBookUrl (_:(JObject fileInfo):_) = maybeUrl $ lookup "ro_uri" fileInfo
     parseBookUrl _ = Nothing
     maybeUrl :: Maybe JValue -> Maybe String
     maybeUrl (Just (JString s)) = Just s
     maybeUrl _ = Nothing
+parseBook _ = Nothing
+    
+parseBooks :: String -> Maybe [Book]
+parseBooks response = do
+  json <- decode response :: Maybe JArray
+  dirInfo <- (json !! 1)
+  dirInfoObj <- asObject dirInfo
+  children <- lookup "children" dirInfoObj
+  childrenObj <- asObject children
+  childrenList <- Just $ toList childrenObj
+  books <- Just $ mapMaybe parseBook childrenList
+  return books
     
 getBooks :: Handler
 getBooks = do
   dirInfo <- liftEff $ readTextFile UTF8 "dummy_response2"
-  sendJson $ encode $ parseBooks dirInfo
-    -- callback <- capture (\s -> sendJson $ parseLafsToBooks s)
-    -- liftEff $ unsafeHttpGet booksUrl callback
+  let books = fromMaybe [] $ parseBooks dirInfo
+  sendJson $ encode books
     
 errorHandler :: Error -> Handler
 errorHandler err = do
