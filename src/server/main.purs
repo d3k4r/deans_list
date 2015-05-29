@@ -5,7 +5,7 @@ import DeanList.Server.Book (Book(Book), parseBooks)
 import Control.Monad.Eff (Eff(..))
 import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff.Exception (Error(..), message)
-import Debug.Trace (trace, print)
+import Debug.Trace (Trace(..), trace, print)
 import Data.Function (Fn3(..), runFn3)
 import Data.Foreign.EasyFFI (unsafeForeignFunction)
 import Data.JSON (encode)
@@ -72,7 +72,15 @@ function envVarImpl(just, nothing, name) {
 envVar :: forall a. String -> Maybe a
 envVar s = runFn3 envVarImpl Just Nothing s
 
+envVarOrDefault :: forall a. a -> String -> a
+envVarOrDefault default' name = fromMaybe default' $ envVar name
+
+traceServerConfig :: forall a. String -> Number -> a -> Eff (trace :: Trace) Unit
+traceServerConfig booksPath port = \_ -> trace 
+  ("Server running on port " ++ (show port) ++
+  ", serving books from '" ++ booksPath ++ "'")
+
 main = do
   port <- unsafeForeignFunction [""] "process.env.DEANS_LIST_PORT || 8080"
-  let booksPath = fromMaybe "." $ envVar "DEANS_LIST_BOOKS_PATH"
-  listenHttp (appSetup booksPath) port \_ -> trace $ "Server running on localhost:" ++ show port
+  let booksPath = envVarOrDefault "." "DEANS_LIST_BOOKS_PATH"
+  listenHttp (appSetup booksPath) port $ traceServerConfig booksPath port
