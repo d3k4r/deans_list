@@ -1,6 +1,6 @@
 module DeanList.Server.Main where 
 
-import DeanList.Server.Book (Book(Book), parseBooks)
+import DeanList.Book (Book(Book), parseBooks)
 
 import Control.Monad.Eff (Eff(..))
 import Control.Monad.Eff.Class (liftEff)

@@ -9,6 +9,7 @@ var rename = require('gulp-rename')
 var paths = {
   server: 'src/server/**/*.purs',
   client: 'src/client/**/*.purs',
+  all: 'src/**/*.purs',
   dependencies: 'bower_components/**/src/**/*.purs'
 };
 
@@ -17,7 +18,7 @@ gulp.task('clean', function(cb) {
 });
 
 gulp.task('client-compile', function(){
-  return gulp.src([paths.client, paths.dependencies])
+  return gulp.src([paths.all, paths.dependencies])
     .pipe(purescript.psc({
       main: 'DeanList.Client.Main', 
       output: 'client_nobrowserify.js', 
@@ -45,7 +46,7 @@ gulp.task('client-browserify', ['client-compile'], function() {
 })
 
 gulp.task('server', function(){
-  return gulp.src([paths.server, paths.dependencies])
+  return gulp.src([paths.all, paths.dependencies])
     .pipe(purescript.psc({
       main: 'DeanList.Server.Main', 
       output: 'server.js',
@@ -60,14 +61,12 @@ gulp.task('server', function(){
 });
 
 gulp.task('dot-psci', function(){
-  return gulp.src([paths.client, paths.server, paths.dependencies])
+  return gulp.src([paths.all, paths.dependencies])
     .pipe(purescript.dotPsci());
 });
 
 gulp.task('watch', function() {
-  gulp.watch(paths.server, ['server']);
-  gulp.watch(paths.client, ['client']);
-  gulp.watch([paths.client, paths.server], ['dot-psci']);
+  gulp.watch(paths.all, ['client', 'server', 'dot-psci']);
 });
 
 gulp.task('run-server', function () {

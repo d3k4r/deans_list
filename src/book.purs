@@ -1,12 +1,18 @@
-module DeanList.Server.Book where 
+module DeanList.Book where
 
 import Data.Array (mapMaybe, (!!))
-import Data.JSON (JValue(..), JObject(..), JArray(..), ToJSON, encode, decode, object)
+import Data.JSON (JValue(..), JObject(..), JArray(..), ToJSON, FromJSON, encode, decode, object, (.:))
 import Data.Map (lookup, toList)
 import Data.Maybe (Maybe(Just, Nothing))
 import Data.Tuple (Tuple(..), uncurry)
 
 data Book = Book {title :: String, url :: String}
+
+instance bookFromJSON :: FromJSON Book where
+  parseJSON (JObject o) = do
+    title <- o .: "title"
+    url <- o .: "url"
+    return $ Book { title: title, url: url }
 
 instance bookToJSON :: ToJSON Book where
   toJSON (Book b) = object [Tuple "title" (JString b.title), Tuple "url" (JString b.url)]

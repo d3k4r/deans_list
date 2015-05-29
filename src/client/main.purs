@@ -1,5 +1,6 @@
 module DeanList.Client.Main where
 
+import DeanList.Book (Book(Book))
 import DeanList.Client.Html (div, pureUnit, h1, a)
 
 import qualified VirtualDOM as VDom
@@ -7,9 +8,8 @@ import qualified Control.Monad.ST as ST
 
 import Debug.Trace (trace)
 import Data.Array (map, (..))
-import Data.Either (Either(Left, Right), either)
-import Data.JSON (FromJSON, JValue(JObject), eitherDecode, (.:))
-import Data.Maybe (Maybe(Just, Nothing), fromMaybe)
+import Data.Either (either)
+import Data.JSON (eitherDecode)
 import VirtualDOM.VTree (VTree(..), vtext, vnode)
 import DOM (DOM(..), Node(..))
 import Control.Monad.Eff (Eff(..))
@@ -17,14 +17,6 @@ import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Aff (Aff(..), launchAff)
 import Network.HTTP.Affjax (AJAX(..), affjax, defaultRequest)
 import Network.HTTP.Method (Method(GET))
-
-data Book = Book {title :: String, url :: String}
-
-instance bookFromJSON :: FromJSON Book where
-  parseJSON (JObject o) = do
-    title <- o .: "title"
-    url <- o .: "url"
-    return $ Book { title: title, url: url }
 
 type AppState = { books :: [Book] }
 type UiState = { state :: AppState, virtual :: VTree, dom :: Node }
@@ -68,7 +60,7 @@ getBooks :: forall a. Aff (ajax :: AJAX | a) [Book]
 getBooks = do
   res <- affjax $ defaultRequest { url = "books/", method = GET }
   let books = eitherDecode res.response
-  return $ either (\e -> [Book {title: "failed: " ++ (show e), url: ""}]) (\s -> s) books
+  return $ either (\e -> []) (\s -> s) books
 
 main = launchAff $ do
   books <- getBooks
