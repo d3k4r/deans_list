@@ -12,7 +12,7 @@ import Data.JSON (encode)
 import Data.Maybe (Maybe(..), fromMaybe)
 import Node.Encoding (Encoding(UTF8))
 import Node.Express.App (App(..), listenHttp, use, useExternal, useOnError, get)
-import Node.Express.Handler (Handler(..), setStatus, sendJson, getOriginalUrl, next)
+import Node.Express.Handler (Handler(..), setStatus, send, sendJson, getOriginalUrl, next)
 import Node.Express.Types (Request(..), Response(..), ExpressM(..))
 import Node.FS.Sync (readTextFile)
 
@@ -29,7 +29,7 @@ getBooks :: String -> Handler
 getBooks booksPath = do
   dirInfo <- liftEff $ readTextFile UTF8 (booksPath ++ "/dummy_response2")
   let books = fromMaybe [] $ parseBooks dirInfo
-  sendJson $ encode books
+  send $ encode books
     
 errorHandler :: Error -> Handler
 errorHandler err = do

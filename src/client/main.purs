@@ -2,27 +2,32 @@ module DeanList.Client.Main where
 
 import DeanList.Client.Html (div, pureUnit, h1, a)
 
+import qualified VirtualDOM as VDom
+import qualified Control.Monad.ST as ST
+
 import Debug.Trace (trace)
 import Data.Array (map, (..))
 import Data.Either (Either(Left, Right), either)
-import Data.Foreign (F(..))
-import Data.Foreign.Class (readJSON)
-import qualified VirtualDOM as VDom
+import Data.JSON (FromJSON, JValue(JObject), eitherDecode, (.:))
+import Data.Maybe (Maybe(Just, Nothing), fromMaybe)
 import VirtualDOM.VTree (VTree(..), vtext, vnode)
 import DOM (DOM(..), Node(..))
-import qualified Control.Monad.ST as ST
 import Control.Monad.Eff (Eff(..))
 import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Aff (Aff(..), launchAff)
 import Network.HTTP.Affjax (AJAX(..), affjax, defaultRequest)
 import Network.HTTP.Method (Method(GET))
 
-type Book = String
+data Book = Book {title :: String, url :: String}
+
+instance bookFromJSON :: FromJSON Book where
+  parseJSON (JObject o) = do
+    title <- o .: "title"
+    url <- o .: "url"
+    return $ Book { title: title, url: url }
+
 type AppState = { books :: [Book] }
 type UiState = { state :: AppState, virtual :: VTree, dom :: Node }
-
-bookPath :: Book -> String
-bookPath b = "books/" ++ b
 
 render :: AppState -> VTree
 render state = div {className: "container pure-g"} grids
@@ -30,7 +35,7 @@ render state = div {className: "container pure-g"} grids
     grids = [h1 {} [], pureUnit "1-5" [], pureUnit "3-5" [title, bookList], pureUnit "1-5" []]
     title = h1 {className: "title"} [vtext "Dean's List"]
     bookList = div {} bookItems
-    bookItems = map (\b -> div {className: "book"} [a {href: bookPath b} [vtext b]]) state.books
+    bookItems = map (\(Book b) -> div {className: "book"} [a {href: b.url} [vtext b.title]]) state.books
 
 initUiState :: AppState -> UiState
 initUiState state = { state: state, virtual: virtual, dom: dom }
@@ -62,8 +67,8 @@ foreign import unsafeAppendToBody
 getBooks :: forall a. Aff (ajax :: AJAX | a) [Book]
 getBooks = do
   res <- affjax $ defaultRequest { url = "books/", method = GET }
-  let booksOrError = readJSON res.response :: F [Book]
-  return $ either (\e -> []) (\b -> b) booksOrError
+  let books = eitherDecode res.response
+  return $ either (\e -> [Book {title: "failed: " ++ (show e), url: ""}]) (\s -> s) books
 
 main = launchAff $ do
   books <- getBooks
