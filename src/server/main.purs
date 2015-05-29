@@ -6,10 +6,10 @@ import Control.Monad.Eff (Eff(..))
 import Control.Monad.Eff.Class (liftEff)
 import Control.Monad.Eff.Exception (Error(..), message)
 import Debug.Trace (trace, print)
-import Data.Function (Fn3(..))
+import Data.Function (Fn3(..), runFn3)
 import Data.Foreign.EasyFFI (unsafeForeignFunction)
 import Data.JSON (encode)
-import Data.Maybe (fromMaybe)
+import Data.Maybe (Maybe(..), fromMaybe)
 import Node.Encoding (Encoding(UTF8))
 import Node.Express.App (App(..), listenHttp, use, useExternal, useOnError, get)
 import Node.Express.Handler (Handler(..), setStatus, sendJson, getOriginalUrl, next)
@@ -19,17 +19,15 @@ import Node.FS.Sync (readTextFile)
 foreign import staticMiddleware "var staticMiddleware = require('express').static"
     :: String -> Fn3 Request Response (ExpressM Unit) (ExpressM Unit)
 
-booksUrl = "http://localhost:3456/uri/URI%3ADIR2%3Arilot7zn3ycl6lmngkd5iab3pm%3Ahzko5cxtvwevu33qbyv72b3mn5tfzl7l7igllceqiax6akkc6clq/?t=json"
-
 logger :: Handler
 logger = do
     url <- getOriginalUrl
     liftEff $ trace url
     next
     
-getBooks :: Handler
-getBooks = do
-  dirInfo <- liftEff $ readTextFile UTF8 "dummy_response2"
+getBooks :: String -> Handler
+getBooks booksPath = do
+  dirInfo <- liftEff $ readTextFile UTF8 (booksPath ++ "/dummy_response2")
   let books = fromMaybe [] $ parseBooks dirInfo
   sendJson $ encode books
     
@@ -38,16 +36,12 @@ errorHandler err = do
     setStatus 400
     sendJson {error: message err}
             
-appSetup :: App
-appSetup = do
+appSetup :: String -> App
+appSetup booksPath = do
     use logger
     useExternal $ staticMiddleware "public"
     useOnError errorHandler
-    get "/books" getBooks
-    
-main = do
-  port <- unsafeForeignFunction [""] "process.env.PORT || 8080"
-  listenHttp appSetup port \_ -> trace $ "Server running on localhost:" ++ show port
+    get "/books" $ getBooks booksPath
 
 foreign import unsafeHttpGet
 """
@@ -63,3 +57,22 @@ function unsafeHttpGet(url) {
   }
   }
 }""" :: forall eff. String -> (String -> Eff ( | eff) Unit) -> Eff ( | eff) Unit
+
+foreign import envVarImpl
+"""
+function envVarImpl(just, nothing, name) {
+  var v = process.env[name];
+  if(v !== undefined){
+    return just(v);
+  } else {
+    return nothing;
+  }
+}""" :: forall a. Fn3 (a -> Maybe a) (Maybe a) String (Maybe a)
+
+envVar :: forall a. String -> Maybe a
+envVar s = runFn3 envVarImpl Just Nothing s
+
+main = do
+  port <- unsafeForeignFunction [""] "process.env.DEANS_LIST_PORT || 8080"
+  let booksPath = fromMaybe "." $ envVar "DEANS_LIST_BOOKS_PATH"
+  listenHttp (appSetup booksPath) port \_ -> trace $ "Server running on localhost:" ++ show port
