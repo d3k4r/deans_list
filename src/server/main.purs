@@ -39,8 +39,8 @@ errorHandler err = do
     setStatus 400
     sendJson {error: message err}
             
-appSetup :: String -> App
-appSetup booksPath = do
+appSetup :: ServerConfig -> App
+appSetup { booksPath = booksPath } = do
     use logger
     useExternal $ staticMiddleware "public"
     useOnError errorHandler
@@ -78,13 +78,20 @@ envVar s = runFn3 envVarImpl Just Nothing s
 envVarOrDefault :: forall a. a -> String -> a
 envVarOrDefault default' name = fromMaybe default' $ envVar name
 
-traceServerConfig :: forall a. String -> Number -> a -> Eff (trace :: Trace) Unit
-traceServerConfig booksPath port = \_ -> trace 
+type ServerConfig = {booksPath :: String, port :: Number}
+
+loadServerConfig :: ServerConfig
+loadServerConfig = {
+  booksPath: envVarOrDefault "public/books" "DEANS_LIST_BOOKS_PATH",
+  port: envVarOrDefault 8080 "DEANS_LIST_BOOKS_PORT"
+  }
+
+traceServerConfig :: forall a. ServerConfig -> a -> Eff (trace :: Trace) Unit
+traceServerConfig {booksPath = booksPath, port = port} = \_ -> trace 
   ("Server running on port " ++ (show port) ++
   ", serving books from '" ++ booksPath ++ "'")
 
 main =
-  listenHttp (appSetup booksPath) port $ traceServerConfig booksPath port
+  listenHttp (appSetup config) config.port $ traceServerConfig config
   where
-    port = envVarOrDefault 8080 "DEANS_LIST_PORT"
-    booksPath = envVarOrDefault "." "DEANS_LIST_BOOKS_PATH"
+    config = loadServerConfig
