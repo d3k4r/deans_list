@@ -83,7 +83,8 @@ traceServerConfig booksPath port = \_ -> trace
   ("Server running on port " ++ (show port) ++
   ", serving books from '" ++ booksPath ++ "'")
 
-main = do
-  port <- unsafeForeignFunction [""] "process.env.DEANS_LIST_PORT || 8080"
-  let booksPath = envVarOrDefault "." "DEANS_LIST_BOOKS_PATH"
+main =
   listenHttp (appSetup booksPath) port $ traceServerConfig booksPath port
+  where
+    port = envVarOrDefault 8080 "DEANS_LIST_PORT"
+    booksPath = envVarOrDefault "." "DEANS_LIST_BOOKS_PATH"
