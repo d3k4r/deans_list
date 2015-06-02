@@ -5,11 +5,14 @@ import DeanList.Client.Html (div, pureUnit, h1, a)
 
 import qualified VirtualDOM as VDom
 import qualified Control.Monad.ST as ST
+import qualified Data.String as Str
+import qualified Data.String.Regex as Regex
 
 import Debug.Trace (trace)
-import Data.Array (map, (..))
+import Data.Array (map, (..), (!!))
 import Data.Either (either)
 import Data.JSON (eitherDecode)
+import Data.Maybe (Maybe(Just, Nothing), fromMaybe)
 import VirtualDOM.VTree (VTree(..), vtext, vnode)
 import DOM (DOM(..), Node(..))
 import Control.Monad.Eff (Eff(..))
@@ -21,13 +24,29 @@ import Network.HTTP.Method (Method(GET))
 type AppState = { books :: [Book] }
 type UiState = { state :: AppState, virtual :: VTree, dom :: Node }
 
+formatTrailingTheTitle :: String -> Maybe String
+formatTrailingTheTitle t = do
+  matches <- Regex.match (Regex.regex "^(.*), The$" Regex.noFlags) t
+  mainTitle <- matches !! 1
+  return $ "The " ++ mainTitle
+
+formatBookTitle :: String -> String
+formatBookTitle t = fromMaybe t (formatTrailingTheTitle t)
+
+formatBookLink :: Book -> String
+formatBookLink (Book b) = if Str.null b.subtitle
+  then formattedTitle ++ " (" ++ b.author ++ ")"
+  else formattedTitle ++ " - " ++ b.subtitle ++ " (" ++ b.author ++ ")"
+  where
+    formattedTitle = formatBookTitle b.title
+
 render :: AppState -> VTree
 render state = div {className: "container pure-g"} grids
   where
     grids = [h1 {} [], pureUnit "1-5" [], pureUnit "3-5" [title, bookList], pureUnit "1-5" []]
     title = h1 {className: "title"} [vtext "Dean's List"]
     bookList = div {} bookItems
-    bookItems = map (\(Book b) -> div {className: "book"} [a {href: b.uri} [vtext (b.title ++ " (" ++ b.author ++ ")")]]) state.books
+    bookItems = map (\(Book b) -> div {className: "book"} [a {href: b.uri} [vtext $ formatBookLink (Book b)]]) state.books
 
 initUiState :: AppState -> UiState
 initUiState state = { state: state, virtual: virtual, dom: dom }
