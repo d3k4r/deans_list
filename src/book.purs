@@ -8,16 +8,16 @@ import Data.Map (lookup, toList)
 import Data.Maybe (Maybe(Just, Nothing))
 import Data.Tuple (Tuple(..), uncurry)
 
-data Book = Book {title :: String, url :: String}
+data Book = Book {title :: String, uri :: String}
 
 instance bookFromJSON :: FromJSON Book where
   parseJSON (JObject o) = do
     title <- o .: "title"
-    url <- o .: "url"
-    return $ Book { title: title, url: url }
+    uri <- o .: "uri"
+    return $ Book { title: title, uri: uri }
 
 instance bookToJSON :: ToJSON Book where
-  toJSON (Book b) = object [Tuple "title" (JString b.title), Tuple "url" (JString b.url)]
+  toJSON (Book b) = object [Tuple "title" (JString b.title), Tuple "uri" (JString b.uri)]
 
 asObject :: JValue -> Maybe JObject
 asObject (JObject j) = (Just j)
@@ -41,9 +41,9 @@ parseBook fileName (JArray bookInfoArray) = do
   guard $ isBookFormat fileName
   fileInfo <- (bookInfoArray !! 1)
   fileInfoObj <- asObject fileInfo
-  bookUrl <- lookup "ro_uri" fileInfoObj
-  bookUrl' <- asString bookUrl
-  return $ Book {title: fileName, url: bookUrl'}
+  bookUri <- lookup "ro_uri" fileInfoObj
+  bookUri' <- asString bookUri
+  return $ Book {title: fileName, uri: bookUri'}
 parseBook _ _ = Nothing
     
 parseBooks :: String -> Maybe [Book]
