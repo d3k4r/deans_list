@@ -27,7 +27,7 @@ render state = div {className: "container pure-g"} grids
     grids = [h1 {} [], pureUnit "1-5" [], pureUnit "3-5" [title, bookList], pureUnit "1-5" []]
     title = h1 {className: "title"} [vtext "Dean's List"]
     bookList = div {} bookItems
-    bookItems = map (\(Book b) -> div {className: "book"} [a {href: b.uri} [vtext b.title]]) state.books
+    bookItems = map (\(Book b) -> div {className: "book"} [a {href: b.uri} [vtext (b.title ++ " (" ++ b.author ++ ")")]]) state.books
 
 initUiState :: AppState -> UiState
 initUiState state = { state: state, virtual: virtual, dom: dom }
