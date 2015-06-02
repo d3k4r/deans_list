@@ -8,6 +8,7 @@ import qualified Control.Monad.ST as ST
 import qualified Data.String as Str
 import qualified Data.String.Regex as Regex
 
+import Control.Alt ((<|>))
 import Debug.Trace (trace)
 import Data.Array (map, (..), (!!))
 import Data.Either (either)
@@ -24,21 +25,22 @@ import Network.HTTP.Method (Method(GET))
 type AppState = { books :: [Book] }
 type UiState = { state :: AppState, virtual :: VTree, dom :: Node }
 
-formatTrailingTheTitle :: String -> Maybe String
-formatTrailingTheTitle t = do
-  matches <- Regex.match (Regex.regex "^(.*), The$" Regex.noFlags) t
+formatTrailingWord :: String -> String -> Maybe String
+formatTrailingWord word title = do
+  matches <- Regex.match (Regex.regex ("^(.*), " ++ word ++ "$") Regex.noFlags) title
   mainTitle <- matches !! 1
-  return $ "The " ++ mainTitle
+  return $ word ++ " " ++ mainTitle
 
-formatBookTitle :: String -> String
-formatBookTitle t = fromMaybe t (formatTrailingTheTitle t)
+formatTrailingWords :: String -> String
+formatTrailingWords t = fromMaybe t ((formatTrailingWord "The" t) <|> (formatTrailingWord "A" t))
 
 formatBookLink :: Book -> String
 formatBookLink (Book b) = if Str.null b.subtitle
   then formattedTitle ++ " (" ++ b.author ++ ")"
-  else formattedTitle ++ " - " ++ b.subtitle ++ " (" ++ b.author ++ ")"
+  else formattedTitle ++ " - " ++ formattedSubtitle ++ " (" ++ b.author ++ ")"
   where
-    formattedTitle = formatBookTitle b.title
+    formattedTitle = formatTrailingWords b.title
+    formattedSubtitle = formatTrailingWords b.subtitle
 
 render :: AppState -> VTree
 render state = div {className: "container pure-g"} grids
