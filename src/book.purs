@@ -1,6 +1,8 @@
 module DeanList.Book where
 
+import Control.MonadPlus (guard)
 import Data.Array (mapMaybe, (!!))
+import Data.String (indexOf, length)
 import Data.JSON (JValue(..), JObject(..), JArray(..), ToJSON, FromJSON, encode, decode, object, (.:))
 import Data.Map (lookup, toList)
 import Data.Maybe (Maybe(Just, Nothing))
@@ -25,13 +27,23 @@ asString :: JValue -> Maybe String
 asString (JString s) = (Just s)
 asString _ = Nothing
 
+stringEndsWith :: String -> String -> Boolean
+stringEndsWith end str = (indexOf end str) == ((length str) - (length end))
+
+isFileOfType :: String -> String -> Boolean
+isFileOfType ext filename = stringEndsWith ("." ++ ext) filename
+
+isBookFormat :: String -> Boolean
+isBookFormat filename = (isFileOfType "epub" filename) || (isFileOfType "pdf" filename)
+
 parseBook :: String -> JValue -> Maybe Book
-parseBook title (JArray bookInfoArray) = do
+parseBook fileName (JArray bookInfoArray) = do
+  guard $ isBookFormat fileName
   fileInfo <- (bookInfoArray !! 1)
   fileInfoObj <- asObject fileInfo
   bookUrl <- lookup "ro_uri" fileInfoObj
   bookUrl' <- asString bookUrl
-  return $ Book {title: title, url: bookUrl'}
+  return $ Book {title: fileName, url: bookUrl'}
 parseBook _ _ = Nothing
     
 parseBooks :: String -> Maybe [Book]
